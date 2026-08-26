@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothHidDevice;
 import android.bluetooth.BluetoothHidDeviceAppSdpSettings;
 import android.bluetooth.BluetoothProfile;
 import android.os.Bundle;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.TextView;
@@ -21,8 +22,8 @@ public class MainActivity extends Activity {
 
     private static final byte[] HID_DESCRIPTOR = new byte[]{
         0x05, 0x01, 0x09, 0x05, (byte) 0xa1, 0x01,
-        0x05, 0x09, 0x19, 0x01, 0x29, 0x08, 0x15, 0x00, 0x25, 0x01, 0x95, 0x08, 0x75, 0x01, (byte) 0x81, 0x02,
-        0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x32, 0x09, 0x35, (byte) 0x15, (byte) 0x81, 0x25, 0x7f, 0x75, 0x08, 0x95, 0x04, (byte) 0x81, 0x02,
+        0x05, 0x09, 0x19, 0x01, 0x29, 0x08, 0x15, 0x00, 0x25, 0x01, (byte) 0x95, 0x08, 0x75, 0x01, (byte) 0x81, 0x02,
+        0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x32, 0x09, 0x35, 0x15, (byte) 0x81, 0x25, 0x7f, 0x75, 0x08, (byte) 0x95, 0x04, (byte) 0x81, 0x02,
         (byte) 0xc0
     };
 
@@ -129,7 +130,7 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
-        if ((event.getSource() & MotionEvent.SOURCE_JOYSTICK) == MotionEvent.SOURCE_JOYSTICK) {
+        if ((event.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             lx = (byte) (event.getAxisValue(MotionEvent.AXIS_X) * 127);
             ly = (byte) (event.getAxisValue(MotionEvent.AXIS_Y) * 127);
             rx = (byte) (event.getAxisValue(MotionEvent.AXIS_Z) * 127);
