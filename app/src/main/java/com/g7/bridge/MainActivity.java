@@ -6,8 +6,12 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHidDevice;
 import android.bluetooth.BluetoothHidDeviceAppSdpSettings;
 import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -31,12 +35,25 @@ public class MainActivity extends Activity {
     private byte buttonState = 0;
     private byte lx = 0, ly = 0, rx = 0, ry = 0;
 
+    private final BroadcastReceiver btReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (device != null) {
+                    runOnUiThread(() -> statusTextView.setText("Status: Connection reset. Keeping bridge active..."));
+                }
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         statusTextView = new TextView(this);
-        statusTextView.setText("G7 Bridge Gamepad Active\nWaiting for Bluetooth connection...");
+        statusTextView.setText("G7 Bridge Gamepad Active\nInitializing Bluetooth stack...");
         statusTextView.setTextSize(18);
         statusTextView.setPadding(40, 40, 40, 40);
         setContentView(statusTextView);
@@ -47,10 +64,8 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // ტელეფონის ხილვადობის ჩართვა აპის გახსნისას
-        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-        startActivity(discoverableIntent);
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        registerReceiver(btReceiver, filter);
 
         initHidProfile();
     }
@@ -61,7 +76,8 @@ public class MainActivity extends Activity {
             public void onServiceConnected(int profile, BluetoothProfile proxy) {
                 if (profile == BluetoothProfile.HID_DEVICE) {
                     hidDeviceService = (BluetoothHidDevice) proxy;
-                    registerHidApp();
+                    // Delay registration by 3 seconds to avoid instantly dropping active ACL links
+                    new Handler().postDelayed(() -> registerHidApp(), 3000);
                 }
             }
 
@@ -89,11 +105,21 @@ public class MainActivity extends Activity {
                         runOnUiThread(() -> statusTextView.setText("Connected to iPhone: " + device.getName()));
                     } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                         connectedDevice = null;
-                        runOnUiThread(() -> statusTextView.setText("Disconnected. Waiting for connection..."));
+                        runOnUiThread(() -> statusTextView.setText("Waiting for iPhone connection..."));
                     }
                 }
             });
         } catch (SecurityException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            unregisterReceiver(btReceiver);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
